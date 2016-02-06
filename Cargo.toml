@@ -1,0 +1,17 @@
+[package]
+name = "dlc-decrypter"
+version = "0.0.1"
+authors = ["Tobias Matt <t.matt81@gmail.com>"]
+
+[dependencies]
+rustc-serialize = "0.3"
+hyper = "0.7"
+rust-crypto = "0.2"
+regex = "0.1"
+
+[lib]
+name = "dlc_decrypter"
+
+[[bin]]
+doc = false
+name = "dlc_decrypter"
