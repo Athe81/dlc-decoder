@@ -21,9 +21,9 @@ use crypto::buffer::{ ReadBuffer, WriteBuffer };
 
 #[derive(Debug)]
 pub struct FileData {
-    url: String,
-    name: String,
-    size: String
+    pub url: String,
+    pub name: String,
+    pub size: String
 }
 
 impl FileData {
@@ -38,9 +38,9 @@ impl FileData {
 
 #[derive(Debug)]
 pub struct PkgData {
-    name: String,
-    pwd: String,
-    files: Vec<FileData>,
+    pub name: String,
+    pub pwd: String,
+    pub files: Vec<FileData>,
 }
 
 impl PkgData {
