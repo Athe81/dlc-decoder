@@ -1,12 +1,13 @@
 extern crate dlc_decrypter;
 
 use dlc_decrypter::*;
+use dlc_decrypter::error::*;
 
 use std::env;
 use std::io::Read;
 use std::fs::File;
 
-fn read_file(file: &str) -> Result<Vec<u8>, DLCError> {
+fn read_file(file: &str) -> Result<Vec<u8>> {
     let mut f = try!(File::open(&file));
     let mut data = Vec::new();
     try!(f.read_to_end(&mut data));
