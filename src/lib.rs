@@ -1,92 +1,29 @@
+#[macro_use] extern crate error_chain;
+extern crate reqwest;
 extern crate rustc_serialize;
-extern crate hyper;
 extern crate crypto;
 extern crate regex;
 
-use std::io;
 use std::io::Read;
 use std::ops::Deref;
-use std::fmt;
 use std::str;
 
+pub mod error;
+
+use error::*;
+use reqwest::Client;
+use reqwest::header::{Connection, UserAgent};
 use regex::Regex;
-use rustc_serialize::base64::{ FromBase64, FromBase64Error };
+use rustc_serialize::base64::FromBase64;
 
-use hyper::Client;
-use hyper::header::{Connection, UserAgent};
-
-use crypto::{ symmetriccipher, buffer, aes, blockmodes };
+use crypto::{buffer, aes, blockmodes };
 use crypto::buffer::{ ReadBuffer, WriteBuffer };
-use crypto::symmetriccipher::{ Decryptor, SymmetricCipherError };
-
-#[derive(Debug)]
-pub enum DLCError {
-    Io(io::Error),
-    Base64(FromBase64Error),
-    Hyper(hyper::error::Error),
-    Crypto(symmetriccipher::SymmetricCipherError),
-    StrUtf8(str::Utf8Error),
-    StringUtf8(std::string::FromUtf8Error),
-    Corrupted,
-    Unexpected,
-}
-
-impl From<io::Error> for DLCError {
-    fn from(err: io::Error) -> DLCError {
-        DLCError::Io(err)
-    }
-}
-
-impl From<FromBase64Error> for DLCError {
-    fn from(err: FromBase64Error) -> DLCError {
-        DLCError::Base64(err)
-    }
-}
-
-impl From<hyper::error::Error> for DLCError {
-    fn from(err: hyper::error::Error) -> DLCError {
-        DLCError::Hyper(err)
-    }
-}
-
-impl From<symmetriccipher::SymmetricCipherError> for DLCError {
-    fn from(err: symmetriccipher::SymmetricCipherError) -> DLCError {
-        DLCError::Crypto(err)
-    }
-}
-
-impl From<str::Utf8Error> for DLCError {
-    fn from(err: str::Utf8Error) -> DLCError {
-        DLCError::StrUtf8(err)
-    }
-}
-
-impl From<std::string::FromUtf8Error> for DLCError {
-    fn from(err: std::string::FromUtf8Error) -> DLCError {
-        DLCError::StringUtf8(err)
-    }
-}
-
-impl fmt::Display for DLCError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            DLCError::Io(ref err) => err.fmt(f),
-            DLCError::Base64(ref err) => err.fmt(f),
-            DLCError::Hyper(ref err) => err.fmt(f),
-            DLCError::Crypto(_) => write!(f, "Decryption failed."),
-            DLCError::StrUtf8(ref err) => err.fmt(f),
-            DLCError::StringUtf8(ref err) => err.fmt(f),
-            DLCError::Corrupted   => write!(f, "File is corrupted."),
-            DLCError::Unexpected   => write!(f, "Unexpected data from service.jdownloader.org."),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct FileData {
-    url: String,
-    name: String,
-    size: String
+    pub url: String,
+    pub name: String,
+    pub size: String
 }
 
 impl FileData {
@@ -101,9 +38,9 @@ impl FileData {
 
 #[derive(Debug)]
 pub struct PkgData {
-    name: String,
-    pwd: String,
-    files: Vec<FileData>,
+    pub name: String,
+    pub pwd: String,
+    pub files: Vec<FileData>,
 }
 
 impl PkgData {
@@ -116,21 +53,21 @@ impl PkgData {
     }
 }
 
-fn get_key(key: &[u8], app_name: &str) -> Result<Vec<u8>, DLCError> {
-    let client = Client::new();
+fn get_key(key: &[u8], app_name: &str) -> Result<Vec<u8>> {
     let url = "http://service.jdownloader.org/dlcrypt/service.php?srcType=dlc&destType=".to_string()
         + app_name + "&data=" + try!(str::from_utf8(key));
-    let mut res = try!(client.get(&url)
+
+    let client = Client::new();
+    let mut res = client.get(&url)
         .header(Connection::close())
-        // UserAgent is important
-        .header(UserAgent("Mozilla/5.3 (Windows; U; Windows NT 5.1; de; rv:1.8.1.6) Gecko/2232 Firefox/3.0.0.R".to_string()))
-        .send());
+        .header(UserAgent::new("Mozilla/5.3 (Windows; U; Windows NT 5.1; de; rv:1.8.1.6) Gecko/2232 Firefox/3.0.0.R"))
+        .send()?;
 
     let mut key = Vec::new();
-    try!(res.read_to_end(&mut key));
+    res.read_to_end(&mut key)?;
 
     if key.len() != 33 {
-        return Err(DLCError::Unexpected);
+        bail!("Unexpected Error");
     };
     // remove <rc> and </rc>
     let key = key[4..28].to_vec();
@@ -139,7 +76,7 @@ fn get_key(key: &[u8], app_name: &str) -> Result<Vec<u8>, DLCError> {
     return Ok(key);
 }
 
-fn aes_decrypt(data: Vec<u8>, dec_key: &[u8], dec_iv: &[u8]) -> Result<Vec<u8>, DLCError> {
+fn aes_decrypt(data: Vec<u8>, dec_key: &[u8], dec_iv: &[u8]) -> Result<Vec<u8>> {
     let mut out = [0; 4096];
     let mut reader = buffer::RefReadBuffer::new(data.deref());
     let mut writer = buffer::RefWriteBuffer::new(&mut out);
@@ -152,7 +89,8 @@ fn aes_decrypt(data: Vec<u8>, dec_key: &[u8], dec_iv: &[u8]) -> Result<Vec<u8>, 
 
     let mut result = Vec::new();
     loop {
-        try!(dec.decrypt(&mut reader, &mut writer, true));
+        // clean this up and use error_chain
+        dec.decrypt(&mut reader, &mut writer, true).unwrap();
         if writer.is_empty() {
             break;
         }
@@ -165,10 +103,10 @@ fn aes_decrypt(data: Vec<u8>, dec_key: &[u8], dec_iv: &[u8]) -> Result<Vec<u8>, 
     return Ok(result);
 }
 
-fn decrypt_raw(data: Vec<u8>, app_name: &str, dec_key: &[u8], dec_iv: &[u8]) -> Result<Vec<u8>, DLCError> {
+fn decrypt_raw(data: Vec<u8>, app_name: &str, dec_key: &[u8], dec_iv: &[u8]) -> Result<Vec<u8>> {
     let len = data.len();
     if len <= 88 {
-        return Err(DLCError::Corrupted);
+        bail!("Corrupted data");
     };
     let (data, key) = data.split_at(len-88);
 
@@ -182,7 +120,7 @@ fn decrypt_raw(data: Vec<u8>, app_name: &str, dec_key: &[u8], dec_iv: &[u8]) -> 
     return Ok(data);
 }
 
-fn pkg_details(data: String) -> Result<(String, String), DLCError> {
+fn pkg_details(data: String) -> Result<(String, String)> {
     let re = Regex::new(r#"name="([^"])*""#).unwrap();
     let (s, e) = re.find(&data).unwrap();
     let name = data[s+6..e-1].to_string();
@@ -212,7 +150,7 @@ fn file_details(data: String, pos: usize) -> String {
     buf
 }
 
-pub fn decrypt_dlc(data: Vec<u8>, app_name: &str, dec_key: &[u8], dec_iv: &[u8]) -> Result<PkgData, DLCError> {
+pub fn decrypt_dlc(data: Vec<u8>, app_name: &str, dec_key: &[u8], dec_iv: &[u8]) -> Result<PkgData> {
     let data = try!(decrypt_raw(data, app_name, dec_key, dec_iv));
     let data = try!(String::from_utf8(data));
     // let data = data.trim();
