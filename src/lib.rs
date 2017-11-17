@@ -57,11 +57,12 @@ pub fn decrypt_dlc(data: Vec<u8>, app_name: &str, dec_key: &[u8], dec_iv: &[u8])
     let mut pkg = PkgData::new();
 
     let re = Regex::new(r#"<package ([^>]*)"#)?;
-    let (s, e) = re.find(&data).ok_or("Can't find package in data")?;
-    let (name, pwd) = match pkg_details(data[s..e].to_string()) {
+    let t = re.find(&data).ok_or("Can't find package in data")?;
+    let (name, pwd) = match pkg_details(t.as_str().to_string()) {
         Ok((name, pwd)) => (name, pwd),
         Err(_)          => (String::new(), String::new()),
     };
+
     pkg.name = name;
     pkg.pwd = pwd;
 
@@ -157,12 +158,12 @@ fn decrypt_raw(data: Vec<u8>, app_name: &str, dec_key: &[u8], dec_iv: &[u8]) -> 
 
 fn pkg_details(data: String) -> Result<(String, String)> {
     let re = Regex::new(r#"name="([^"])*""#)?;
-    let (s, e) = re.find(&data).ok_or("Can't find name in data")?;
-    let name = String::from_utf8(base64::decode(&data[s+6..e-1])?)?;
+    let t = re.find(&data).ok_or("Can't find name in data")?;
+    let name = String::from_utf8(base64::decode(t.as_str())?)?;
 
     let re = Regex::new(r#"passwords="([^"])*""#)?;
-    let (s, e) = re.find(&data).ok_or("Can't find password in data")?;
-    let pwd = String::from_utf8(base64::decode(&data[s+11..e-1])?)?;
+    let t = re.find(&data).ok_or("Can't find password in data")?;
+    let pwd = String::from_utf8(base64::decode(&t.as_str())?)?;
 
     Ok((name, pwd))
 }
