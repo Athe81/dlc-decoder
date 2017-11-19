@@ -1,6 +1,6 @@
 [package]
 name = "dlc-decrypter"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Tobias Matt <t.matt81@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/Bubblepoint/dlc-decoder"
@@ -13,12 +13,5 @@ reqwest = "0.8.1"
 rust-crypto = "0.2"
 regex = "0.2.2"
 
-
-
-
 [lib]
-name = "dlc_decrypter"
-
-[[bin]]
-doc = false
 name = "dlc_decrypter"

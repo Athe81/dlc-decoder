@@ -1,3 +1,5 @@
+//! ErrorChain mod to hold all errors.
+
 error_chain!{
 
     types {
