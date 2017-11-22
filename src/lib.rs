@@ -135,6 +135,14 @@ impl DlcDecoder {
         }
     }
 
+    // Set a different JDownloader credential to login, than the default ones.
+    pub fn set_credentials<S, D>(&mut self, name: S, key: D, iv: D) 
+    where S: Into<String>, D: Into<Vec<u8>> {
+        self.jd_app_name = name.into();
+        self.jd_decryption_key = key.into();
+        self.jd_decryption_iv = iv.into();
+    }
+
     /// Decrypt a specified .dlc file
     pub fn from_file<P: Into<String>>(&self, path: P) -> Result<DlcPackage> {
         // read the file
