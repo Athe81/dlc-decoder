@@ -32,6 +32,7 @@ fn main() {
 
 ## Thanks
 * [Bubblepoint](https://github.com/Bubblepoint) for creating and maintaing the crate.
+* [Robert Sch&uuml;tte](https://github.com/Roba1993) for doing a great refactoring.
 
 ## License
 Distributed under the [MIT License](LICENSE).
