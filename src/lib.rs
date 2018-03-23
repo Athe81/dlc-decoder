@@ -233,18 +233,22 @@ impl DlcDecoder {
 
     fn get_jd_decryption_key(&self, key: &[u8]) -> Result<Vec<u8>> {
         // build the request url
+        println!("format url");
         let url = format!("http://service.jdownloader.org/dlcrypt/service.php?srcType=dlc&destType={}&data={}", &self.jd_app_name, str::from_utf8(key)?);
 
+        println!("make http call");
         // build up the request
-        let client = Client::new();
-        let mut res = client.get(&url)
+        let mut res = Client::new().get(&url)
             .header(Connection::close())
             .header(UserAgent::new("Mozilla/5.3 (Windows; U; Windows NT 5.1; de; rv:1.8.1.6) Gecko/2232 Firefox/3.0.0.R"))
             .send()?;
+        println!("end http call");
 
         // read the response
         let mut key = Vec::new();
         res.read_to_end(&mut key)?;
+
+        println!("have length");
 
         // check if response is long enough
         if key.len() != 33 {
