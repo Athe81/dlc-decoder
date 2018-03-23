@@ -157,12 +157,15 @@ impl DlcDecoder {
     /// Decrypt the contet of a .dlc file.
     pub fn from_data(&self, data: &[u8]) -> Result<DlcPackage> {
         // decrypt the .dlc data
+        println!("Decrypt dlc");
         let data = self.decrypt_dlc(data)?;
 
         // parse the dlc header data
+        println!("Parse header");
         let mut dlc = self.parse_header(&data)?;
 
         // parse the dlc body
+        println!("Parse body");
         self.parse_body(&mut dlc, &data)?;
 
         Ok(dlc)
@@ -196,6 +199,7 @@ impl DlcDecoder {
     }
 
     fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+        println!("Decrypt RAW data");
         // create decryptor and set keys & values
         let mut decryptor = aes::cbc_decryptor(
             aes::KeySize::KeySize128,
@@ -210,6 +214,7 @@ impl DlcDecoder {
         let mut writ_buffer = buffer::RefWriteBuffer::new(&mut buffer);
         let mut result = Vec::new();
 
+        println!("Decrypt");
         loop {
             // decrypt the buffer
             if decryptor.decrypt(&mut read_buffer, &mut writ_buffer, true).is_err() {
