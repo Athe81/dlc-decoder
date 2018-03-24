@@ -8,10 +8,10 @@ description = "A decoder library for dlc files"
 
 [dependencies]
 error-chain = "0.11.0"
-base64 = "0.7.0"
+base64 = "0.9.0"
 reqwest = "0.8.5"
 rust-crypto = "0.2.36"
-regex = "0.2.2"
+regex = "0.2.10"
 
 [lib]
 name = "dlc_decrypter"
