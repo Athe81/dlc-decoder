@@ -199,7 +199,7 @@ impl DlcDecoder {
         return Ok(data);
     }
 
-    fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+    /*fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         println!("Decrypt RAW data");
         // create decryptor and set keys & values
         let mut decryptor = aes::cbc_decryptor(
@@ -235,31 +235,45 @@ impl DlcDecoder {
         result.retain(|x| *x !=  0 as u8);
 
         return Ok(result);
-    }
+    }*/
 
-    /*fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+    fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         println!("Decrypt RAW data");
-
-        use openssl::symm::{encrypt, Cipher};
-
-        let cipher = Cipher::aes_128_cbc();
-        let ciphertext = encrypt(
-            cipher,
+        // create decryptor and set keys & values
+        let mut decryptor = cbc_decryptor(
+            aes::KeySize::KeySize128,
             key,
-            Some(iv),
-            data).unwrap();
+            iv,
+            blockmodes::NoPadding,
+        );
 
-
+        // create the buffer objects
+        let mut buffer = [0; 4096];
+        let mut read_buffer = buffer::RefReadBuffer::new(data);
+        let mut writ_buffer = buffer::RefWriteBuffer::new(&mut buffer);
         let mut result = Vec::new();
 
         println!("Decrypt");
-        result.extend_from_slice(&ciphertext);
+        loop {
+            // decrypt the buffer
+            if decryptor.decrypt(&mut read_buffer, &mut writ_buffer, true).is_err() {
+                bail!("Can't decrypt");
+            }
+
+            // when the write_buffer is empty, the decryption is finished
+            if writ_buffer.is_empty() {
+                break;
+            }
+
+            // add the encrypted data to the result
+            result.extend_from_slice(writ_buffer.take_read_buffer().take_remaining());
+        };
 
         // remove tailing zeros
         result.retain(|x| *x !=  0 as u8);
 
         return Ok(result);
-    }*/
+    }
 
     fn get_jd_decryption_key(&self, key: &[u8]) -> Result<Vec<u8>> {
         // build the request url
@@ -351,5 +365,34 @@ impl DlcDecoder {
             Err(_) => data[pos..].to_string(),
         };
         buf
+    }
+}
+
+pub fn cbc_decryptor<X: crypto::blockmodes::PaddingProcessor + Send + 'static>(
+        key_size: crypto::aes::KeySize,
+        key: &[u8],
+        iv: &[u8],
+        padding: X) -> Box<crypto::symmetriccipher::Decryptor + 'static> {
+
+    use crypto::aessafe;
+    use crypto::blockmodes::{CbcDecryptor, PaddingProcessor};
+    use crypto::symmetriccipher::Decryptor;
+
+    match key_size {
+        aes::KeySize::KeySize128 => {
+            let aes_dec = aessafe::AesSafe128Decryptor::new(key);
+            let dec = Box::new(CbcDecryptor::new(aes_dec, padding, iv.to_vec()));
+            dec as Box<Decryptor + 'static>
+        }
+        aes::KeySize::KeySize192 => {
+            let aes_dec = aessafe::AesSafe192Decryptor::new(key);
+            let dec = Box::new(CbcDecryptor::new(aes_dec, padding, iv.to_vec()));
+            dec as Box<Decryptor + 'static>
+        }
+        aes::KeySize::KeySize256 => {
+            let aes_dec = aessafe::AesSafe256Decryptor::new(key);
+            let dec = Box::new(CbcDecryptor::new(aes_dec, padding, iv.to_vec()));
+            dec as Box<Decryptor + 'static>
+        }
     }
 }
