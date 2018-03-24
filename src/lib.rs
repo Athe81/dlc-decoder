@@ -199,7 +199,7 @@ impl DlcDecoder {
         return Ok(data);
     }
 
-    /*fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+    fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         println!("Decrypt RAW data");
         // create decryptor and set keys & values
         let mut decryptor = aes::cbc_decryptor(
@@ -235,9 +235,9 @@ impl DlcDecoder {
         result.retain(|x| *x !=  0 as u8);
 
         return Ok(result);
-    }*/
+    }
 
-    fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+    /*fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         println!("Decrypt RAW data");
 
         use openssl::symm::{encrypt, Cipher};
@@ -259,7 +259,7 @@ impl DlcDecoder {
         result.retain(|x| *x !=  0 as u8);
 
         return Ok(result);
-    }
+    }*/
 
     fn get_jd_decryption_key(&self, key: &[u8]) -> Result<Vec<u8>> {
         // build the request url
