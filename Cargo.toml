@@ -1,6 +1,6 @@
 [package]
 name = "dlc-decrypter"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Tobias Matt <t.matt81@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/Bubblepoint/dlc-decoder"
