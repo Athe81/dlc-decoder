@@ -84,6 +84,7 @@ pub struct DlcLink {
 }
 
 impl DlcLink {
+    /// Create a new empty DlcLink structure.
     fn new() -> DlcLink {
         DlcLink {
             url: String::new(),
@@ -108,6 +109,7 @@ pub struct DlcPackage {
 }
 
 impl DlcPackage {
+    /// Create new empty DlcPackage structure.
     fn new() -> DlcPackage {
         DlcPackage {
             name: String::new(),
@@ -135,7 +137,7 @@ impl DlcDecoder {
         }
     }
 
-    // Set a different JDownloader credential to login, than the default ones.
+    /// Set a different JDownloader credential to login, than the default ones.
     pub fn set_credentials<S, D>(&mut self, name: S, key: D, iv: D) 
     where S: Into<String>, D: Into<Vec<u8>> {
         self.jd_app_name = name.into();
@@ -169,6 +171,7 @@ impl DlcDecoder {
     }
 
     /******************* Private Functions *****************/
+    /// Decrypt the .dlc data to a plain String
     fn decrypt_dlc(&self, data: &[u8]) -> Result<String> {
         // check if the file is to short to get the key out of it
         if data.len() <= 88 {
@@ -195,9 +198,10 @@ impl DlcDecoder {
         return Ok(data);
     }
 
+    /// Decrypt data by the given key and iv.
     fn decrypt_raw_data(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         // create decryptor and set keys & values
-        let mut decryptor = aes::cbc_decryptor(
+        let mut decryptor = aes_cbc_decryptor(
             aes::KeySize::KeySize128,
             key,
             iv,
@@ -231,13 +235,13 @@ impl DlcDecoder {
         return Ok(result);
     }
 
+    /// Download the decryption key for the .dlc container
     fn get_jd_decryption_key(&self, key: &[u8]) -> Result<Vec<u8>> {
         // build the request url
         let url = format!("http://service.jdownloader.org/dlcrypt/service.php?srcType=dlc&destType={}&data={}", &self.jd_app_name, str::from_utf8(key)?);
 
         // build up the request
-        let client = Client::new();
-        let mut res = client.get(&url)
+        let mut res = Client::new().get(&url)
             .header(Connection::close())
             .header(UserAgent::new("Mozilla/5.3 (Windows; U; Windows NT 5.1; de; rv:1.8.1.6) Gecko/2232 Firefox/3.0.0.R"))
             .send()?;
@@ -257,6 +261,7 @@ impl DlcDecoder {
         Ok(key)
     }
 
+    /// Extract the header data
     fn parse_header(&self, data: &str) -> Result<DlcPackage> {
         let mut dlc = DlcPackage::new();
 
@@ -277,6 +282,7 @@ impl DlcDecoder {
         Ok(dlc)
     }
 
+    /// Edxtract the body data
     fn parse_body(&self, dlc: &mut DlcPackage, data: &str) -> Result<()> {
         // split at each file attribute
         let mut files_xml: Vec<&str> = data.split("<file>").collect();
@@ -305,6 +311,7 @@ impl DlcDecoder {
         Ok(())
     }
 
+    /// Get the files details
     fn file_details(&self, data: String, pos: usize) -> String {
         // try to decode the data
         let buf: String = match base64::decode(&data[pos..]) {
@@ -317,5 +324,42 @@ impl DlcDecoder {
             Err(_) => data[pos..].to_string(),
         };
         buf
+    }
+}
+
+// use only for crypto
+use crypto::aessafe;
+use crypto::blockmodes::{CbcDecryptor, PaddingProcessor};
+use crypto::symmetriccipher::Decryptor;
+use crypto::aes::KeySize;
+
+/// Reimplementation of the aes cbc decryptor function from Rust-Crypto. 
+///
+/// This function always use the software decryption insted of the hardware one.
+/// This can have a samll speed impact. But the hardware decryption fails for 
+/// musl-docker builds and is shutting down any programm without a warning.
+///
+/// To garuntee the stability of the dlc-decryptor, we use the software decryption.
+fn aes_cbc_decryptor<X: PaddingProcessor + Send + 'static>(
+        key_size: KeySize,
+        key: &[u8],
+        iv: &[u8],
+        padding: X) -> Box<Decryptor + 'static> {
+    match key_size {
+        KeySize::KeySize128 => {
+            let aes_dec = aessafe::AesSafe128Decryptor::new(key);
+            let dec = Box::new(CbcDecryptor::new(aes_dec, padding, iv.to_vec()));
+            dec as Box<Decryptor + 'static>
+        }
+        KeySize::KeySize192 => {
+            let aes_dec = aessafe::AesSafe192Decryptor::new(key);
+            let dec = Box::new(CbcDecryptor::new(aes_dec, padding, iv.to_vec()));
+            dec as Box<Decryptor + 'static>
+        }
+        KeySize::KeySize256 => {
+            let aes_dec = aessafe::AesSafe256Decryptor::new(key);
+            let dec = Box::new(CbcDecryptor::new(aes_dec, padding, iv.to_vec()));
+            dec as Box<Decryptor + 'static>
+        }
     }
 }
