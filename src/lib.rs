@@ -5,7 +5,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! dlc_decrypter = { git = "https://github.com/Bubblepoint/dlc-decoder" }
+//! dlc-decrypter = "0.2.0"
 //! ```
 //! 
 //! Use the `dlc_decrypter::DlcDecoder` to decrypt a .dlc file or datapackage:
