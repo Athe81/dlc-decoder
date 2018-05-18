@@ -265,8 +265,6 @@ impl DlcDecoder {
     fn parse_header(&self, data: &str) -> Result<DlcPackage> {
         let mut dlc = DlcPackage::new();
 
-        println!("{:?}", data);
-
         // get the package information
         let re = Regex::new(r#"<package ([^>]*)"#)?;
         let pck = re.find(&data).ok_or("Can't find package in data")?.as_str();
