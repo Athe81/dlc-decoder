@@ -270,16 +270,15 @@ impl DlcDecoder {
         let pck = re.find(&data).ok_or("Can't find package in data")?.as_str();
 
         // extract the name
-        let re = Regex::new(r#"name=([^>]*)"#)?;
+        let re = Regex::new(r#"name="([^"]*)"#)?;
         let t = re.find(&pck).ok_or("Can't find name in data")?;
-        dlc.name = String::from_utf8(base64::decode(&pck[t.start()+6..t.end()-2])?)?;
+        dlc.name = String::from_utf8(base64::decode(&pck[t.start()+6..t.end()])?)?;
         
         // extract the password - optional
-        let re = Regex::new(r#"passwords="([^"])*""#)?;
+        let re = Regex::new(r#"passwords="([^"]*)"#)?;
         if let Some(t) = re.find(&pck) {
-            dlc.password = String::from_utf8(base64::decode(&pck[t.start()+11..t.end()-1])?)?;
+            dlc.password = String::from_utf8(base64::decode(&pck[t.start()+11..t.end()])?)?;
         }
-        
  
         Ok(dlc)
     }
