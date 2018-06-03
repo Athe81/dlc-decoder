@@ -6,7 +6,7 @@ A simple library to decode dlc files to a readable format.
 Add `dlc_decrypter` as a dependency in `Cargo.toml`:
 ```toml
 [dependencies]
-dlc-decrypter = "0.2.0"
+dlc-decrypter = "0.2.1"
 ```
 
 Use the `dlc_decrypter::DlcDecoder' to decrypt a .dlc file or datapackage:
